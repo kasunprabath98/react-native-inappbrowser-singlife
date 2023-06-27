@@ -113,7 +113,7 @@ public class RNInAppBrowser {
       CustomTabsIntent.Builder customIntent = new CustomTabsIntent.Builder();
       Intent customIntentBuilder = customIntent.build();
       customIntentBuilder.intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-      customIntentBuilder.lauchUrl(context, Uri.parse(uri));
+      customIntentBuilder.lauchUrl(context, Uri.parse(url));
       return;
     }
 
