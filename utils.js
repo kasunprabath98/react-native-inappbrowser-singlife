@@ -108,6 +108,7 @@ export async function openBrowserAsync(
     dismissButtonStyle: 'close',
     readerMode: false,
     enableBarCollapsing: false,
+    useDefaultCustomTab: true,
   }
 ): Promise<BrowserResult> {
   return RNInAppBrowser.open({

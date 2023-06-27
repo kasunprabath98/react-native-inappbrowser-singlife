@@ -64,6 +64,7 @@ export type InAppBrowserAndroidOptions = {|
   browserPackage?: string,
   showInRecents?: boolean,
   includeReferrer?: boolean,
+  useDefaultCustomTab?:boolean,
 |};
 
 export type InAppBrowserOptions = {
