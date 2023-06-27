@@ -110,10 +110,9 @@ public class RNInAppBrowser {
     final Boolean useDefaultCustomTab = options.getBoolean("useDefaultCustomTab");
     currentActivity = activity;
     if(useDefaultCustomTab) {
-      CustomTabsIntent.Builder customIntent = new CustomTabsIntent.Builder();
-      Intent customIntentBuilder = customIntent.build();
-      customIntentBuilder.intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-      customIntentBuilder.lauchUrl(context, Uri.parse(url));
+      CustomTabsIntent.Builder customTabIntent = new CustomTabsIntent.Builder();
+      customTabIntent.build().intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+      customTabIntent.build().launchUrl(context, Uri.parse(url));
       return;
     }
 
