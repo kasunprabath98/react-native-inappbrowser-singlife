@@ -107,7 +107,15 @@ public class RNInAppBrowser {
 
   public void open(Context context, final ReadableMap options, final Promise promise, Activity activity) {
     final String url = options.getString("url");
+    final Boolean useDefaultCustomTab = options.getBoolean("useDefaultCustomTab");
     currentActivity = activity;
+    if(useDefaultCustomTab) {
+      CustomTabsIntent.Builder customTabIntent = new CustomTabsIntent.Builder();
+      customTabIntent.build().intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+      customTabIntent.build().launchUrl(context, Uri.parse(url));
+      return;
+    }
+
     if (mOpenBrowserPromise != null) {
       WritableMap result = Arguments.createMap();
       result.putString("type", "cancel");
