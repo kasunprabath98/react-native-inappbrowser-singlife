@@ -11,6 +11,7 @@ import org.greenrobot.eventbus.EventBus
 
 public class ChromeActivity: Activity() {
     var opened = false;
+    var resultType = "Dismissed";
     companion object {
         const val KEY_BROWSER_INTENT = "browserIntent"
         const val  TAG = "IN_APP_BROWSER"
@@ -20,9 +21,10 @@ public class ChromeActivity: Activity() {
         // open the chrome tab manager Activity
         try {
             val url  = intent.extras?.getString("url")
-            Log.d(TAG, "onCreate: URL"+ url)
+            Log.d(TAG, "onCreate: URL"+ url);
+            resultType = "Dismissed";
             val customTabIntent = CustomTabsIntent.Builder()
-            customTabIntent.build().intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            customTabIntent.build().intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
             customTabIntent.build().launchUrl(this , Uri.parse(url))
         }
         catch (err: Exception) {
@@ -32,11 +34,13 @@ public class ChromeActivity: Activity() {
 
     override fun onDestroy() {
         val result = Arguments.createMap()
-        result.putString("type", "cancel")
+        result.putString("type", resultType);
         result.putString("message", "cancel");
-        Log.d(TAG, "onDestroy: " )
-        EventBus.getDefault()
-            .post(ChromeTabsDismissedEvent("chrome tabs activity closed", "cancel", false))
+        Log.d(TAG, "onDestroy: " );
+        if(resultType == "cancel") {
+            EventBus.getDefault()
+                .post(ChromeTabsDismissedEvent("chrome tabs activity closed", "cancel", false))
+        }
         super.onDestroy();
     }
 
@@ -49,6 +53,7 @@ public class ChromeActivity: Activity() {
             opened = true
         }else {
             // user has press the back button
+            resultType = "cancel";
             finish();
         }
     }
