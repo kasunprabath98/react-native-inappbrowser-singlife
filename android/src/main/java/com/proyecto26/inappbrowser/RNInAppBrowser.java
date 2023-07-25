@@ -12,6 +12,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.Browser;
 import android.text.TextUtils;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -109,10 +110,14 @@ public class RNInAppBrowser {
     final String url = options.getString("url");
     final Boolean useDefaultCustomTab = options.getBoolean("useDefaultCustomTab");
     currentActivity = activity;
+
     if(useDefaultCustomTab) {
-      CustomTabsIntent.Builder customTabIntent = new CustomTabsIntent.Builder();
-      customTabIntent.build().intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-      customTabIntent.build().launchUrl(context, Uri.parse(url));
+      registerEventBus();
+      mOpenBrowserPromise = promise;
+      Intent authIntent = new Intent(currentActivity , ChromeActivity.class);
+      authIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+      authIntent.putExtra("url", url);
+      currentActivity.startActivity(authIntent);
       return;
     }
 
@@ -141,8 +146,8 @@ public class RNInAppBrowser {
     setColor(builder, options, KEY_NAVIGATION_BAR_COLOR, "setNavigationBarColor", "navigation bar");
     setColor(builder, options, KEY_NAVIGATION_BAR_DIVIDER_COLOR, "setNavigationBarDividerColor", "navigation bar divider");
 
-    if (options.hasKey(KEY_DEFAULT_SHARE_MENU_ITEM) && 
-        options.getBoolean(KEY_DEFAULT_SHARE_MENU_ITEM)) {
+    if (options.hasKey(KEY_DEFAULT_SHARE_MENU_ITEM) &&
+            options.getBoolean(KEY_DEFAULT_SHARE_MENU_ITEM)) {
       builder.addDefaultShareMenuItem();
     }
     if (options.hasKey(KEY_ANIMATIONS)) {
@@ -150,10 +155,10 @@ public class RNInAppBrowser {
       applyAnimation(context, builder, animations);
     }
     if (options.hasKey(KEY_HAS_BACK_BUTTON) &&
-        options.getBoolean(KEY_HAS_BACK_BUTTON)) {
+            options.getBoolean(KEY_HAS_BACK_BUTTON)) {
       builder.setCloseButtonIcon(BitmapFactory.decodeResource(
-        context.getResources(),
-        isLightTheme ? R.drawable.ic_arrow_back_black : R.drawable.ic_arrow_back_white
+              context.getResources(),
+              isLightTheme ? R.drawable.ic_arrow_back_black : R.drawable.ic_arrow_back_white
       ));
     }
 
@@ -184,18 +189,18 @@ public class RNInAppBrowser {
     }
 
     if (options.hasKey(KEY_FORCE_CLOSE_ON_REDIRECTION) &&
-        options.getBoolean(KEY_FORCE_CLOSE_ON_REDIRECTION)) {
+            options.getBoolean(KEY_FORCE_CLOSE_ON_REDIRECTION)) {
       intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
     }
     if (!options.hasKey(KEY_SHOW_IN_RECENTS) ||
-        !options.getBoolean(KEY_SHOW_IN_RECENTS)) {
+            !options.getBoolean(KEY_SHOW_IN_RECENTS)) {
       intent.addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
       intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
     }
 
     intent.putExtra(CustomTabsIntent.EXTRA_ENABLE_URLBAR_HIDING, (
-      options.hasKey(KEY_ENABLE_URL_BAR_HIDING) && 
-      options.getBoolean(KEY_ENABLE_URL_BAR_HIDING)));
+            options.hasKey(KEY_ENABLE_URL_BAR_HIDING) &&
+                    options.getBoolean(KEY_ENABLE_URL_BAR_HIDING)));
     try {
       if (options.hasKey(KEY_BROWSER_PACKAGE)) {
         final String packageName = options.getString(KEY_BROWSER_PACKAGE);
@@ -221,14 +226,14 @@ public class RNInAppBrowser {
     }
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 && options.hasKey(KEY_INCLUDE_REFERRER)
-        && options.getBoolean(KEY_INCLUDE_REFERRER)) {
+            && options.getBoolean(KEY_INCLUDE_REFERRER)) {
       intent.putExtra(Intent.EXTRA_REFERRER,
-          Uri.parse("android-app://" + context.getApplicationContext().getPackageName()));
+              Uri.parse("android-app://" + context.getApplicationContext().getPackageName()));
     }
 
     currentActivity.startActivity(
-        ChromeTabsManagerActivity.createStartIntent(currentActivity, intent),
-        customTabsIntent.startAnimationBundle);
+            ChromeTabsManagerActivity.createStartIntent(currentActivity, intent),
+            customTabsIntent.startAnimationBundle);
   }
 
   public void close() {
@@ -250,7 +255,7 @@ public class RNInAppBrowser {
     mOpenBrowserPromise = null;
 
     currentActivity.startActivity(
-        ChromeTabsManagerActivity.createDismissIntent(currentActivity));
+            ChromeTabsManagerActivity.createDismissIntent(currentActivity));
   }
 
   public void isAvailable(Context context, final Promise promise) {
@@ -260,21 +265,31 @@ public class RNInAppBrowser {
 
   @Subscribe
   public void onEvent(ChromeTabsDismissedEvent event) {
-    unRegisterEventBus();
+    try {
+      unRegisterEventBus();
 
-    if (mOpenBrowserPromise == null) {
-      return;
-    }
+      Log.d(ChromeActivity.TAG, "onEvent: " + event.message);
 
-    if (event.isError) {
-      mOpenBrowserPromise.reject(ERROR_CODE, event.message);
-    } else {
+      if (mOpenBrowserPromise == null) {
+        return;
+      }
+
+      if (event.isError) {
+        mOpenBrowserPromise.reject(ERROR_CODE, event.message);
+      } else {
+        WritableMap result = Arguments.createMap();
+        result.putString("type", event.resultType);
+        result.putString("message", event.message);
+        mOpenBrowserPromise.resolve(result);
+      }
+      mOpenBrowserPromise = null;
+
+    }catch (Exception e){
       WritableMap result = Arguments.createMap();
       result.putString("type", event.resultType);
       result.putString("message", event.message);
       mOpenBrowserPromise.resolve(result);
     }
-    mOpenBrowserPromise = null;
   }
 
   void applyAnimation(Context context, CustomTabsIntent.Builder builder, ReadableMap animations) {
@@ -333,7 +348,7 @@ public class RNInAppBrowser {
   private String getDefaultBrowser(Context context) {
     List<ResolveInfo> resolveInfos = getPreferredPackages(context);
     String packageName = CustomTabsClient.getPackageName(context,
-      Arrays.asList(CHROME_PACKAGE_STABLE, CHROME_PACKAGE_BETA, CHROME_PACKAGE_DEV, LOCAL_PACKAGE));
+            Arrays.asList(CHROME_PACKAGE_STABLE, CHROME_PACKAGE_BETA, CHROME_PACKAGE_DEV, LOCAL_PACKAGE));
     if(packageName == null && resolveInfos != null && resolveInfos.size() > 0){
       packageName = resolveInfos.get(0).serviceInfo.packageName;
     }
